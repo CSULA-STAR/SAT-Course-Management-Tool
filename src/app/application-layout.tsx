@@ -4,9 +4,10 @@ import { Dropdown, DropdownButton, DropdownDivider, DropdownItem, DropdownLabel,
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from '@/components/navbar'
 import { Sidebar, SidebarBody, SidebarHeader, SidebarItem, SidebarLabel, SidebarSection, SidebarSpacer } from '@/components/sidebar'
 import { SidebarLayout } from '@/components/sidebar-layout'
-import { AcademicCapIcon, BookOpenIcon, BuildingOfficeIcon, Square2StackIcon, ArrowRightStartOnRectangleIcon, UserCircleIcon, StarIcon, MoonIcon, SunIcon } from '@heroicons/react/16/solid'
+import { AcademicCapIcon, BookOpenIcon, Square2StackIcon, ArrowRightStartOnRectangleIcon, UserCircleIcon, StarIcon } from '@heroicons/react/16/solid'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react';
+import Image from 'next/image'
+import ThemeSwitcher from "@/components/theme-switcher";
 
 function AccountDropdownMenu({ anchor }: { anchor: 'top start' | 'bottom end' }) {
 return (
@@ -28,27 +29,7 @@ export function ApplicationLayout({
 }: {
     children: React.ReactNode
 }) {
-    const pathname = usePathname();    // dark theme switcher
-    const userTheme = localStorage.getItem("theme");
-    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const [isDarkMode, setIsDarkMode] = useState(userTheme === "dark" || (!userTheme && systemTheme));
-    const themeSwitch = () => {
-        if (document.documentElement.classList.contains("dark")){
-            document.documentElement.classList.remove("dark");
-            localStorage.setItem("theme", "light");
-            setIsDarkMode(false);
-            return;
-        }
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("theme", "dark");
-        setIsDarkMode(true);
-    };
-
-    useEffect(() => {
-        if (userTheme === "dark" || (!userTheme && systemTheme)){
-            document.documentElement.classList.add("dark");
-        }
-    }, []);
+    const pathname = usePathname();
 
     return (
         <SidebarLayout
@@ -67,8 +48,10 @@ export function ApplicationLayout({
         sidebar={
             <Sidebar>
             <SidebarItem disabled={true} className='dark:bg-yellow-500'>
-                <img src="https://westernpsych.org/wp-content/uploads/2018/09/csula-logo-rectangle-brand_horizontal_logo_4color.png" alt="Logo" />
-                <SidebarLabel>Logo</SidebarLabel>
+            <Image 
+                src="/csula-logo.png" alt="Logo"
+                width={200} height={50}
+            />
             </SidebarItem>
             <SidebarHeader>
                 <SidebarItem href="/" current={pathname === '/'}>
@@ -79,44 +62,36 @@ export function ApplicationLayout({
 
             <SidebarBody>
                 <SidebarSection>
-                <SidebarItem href="/csulacourses" current={pathname.startsWith('/csulacourses')}>
-                    <BookOpenIcon />
-                    <SidebarLabel>CSULA Courses</SidebarLabel>
-                </SidebarItem>
-                
-                <SidebarItem href="/courses" current={pathname.startsWith('/courses')}>
-                    <BookOpenIcon />
-                    <SidebarLabel>Courses</SidebarLabel>
-                </SidebarItem>
-                <SidebarItem href="/programs" current={pathname.startsWith('/programs')}>
-                    <Square2StackIcon />
-                    <SidebarLabel>Programs</SidebarLabel>
-                </SidebarItem>
-                <SidebarItem href="/institutions" current={pathname.startsWith('/institutions')}>
-                    <AcademicCapIcon />
-                    <SidebarLabel>Institutions</SidebarLabel>
-                </SidebarItem>
+                    <SidebarItem href="/csulacourses" current={pathname.startsWith('/csulacourses')}>
+                        <BookOpenIcon />
+                        <SidebarLabel>CSULA Courses</SidebarLabel>
+                    </SidebarItem>
+                    <SidebarItem href="/courses" current={pathname.startsWith('/courses')}>
+                        <BookOpenIcon />
+                        <SidebarLabel>Courses</SidebarLabel>
+                    </SidebarItem>
+                    <SidebarItem href="/programs" current={pathname.startsWith('/programs')}>
+                        <Square2StackIcon />
+                        <SidebarLabel>Programs</SidebarLabel>
+                    </SidebarItem>
+                    <SidebarItem href="/institutions" current={pathname.startsWith('/institutions')}>
+                        <AcademicCapIcon />
+                        <SidebarLabel>Institutions</SidebarLabel>
+                    </SidebarItem>
                 </SidebarSection>
                 
                 <SidebarSpacer />
 
                 <SidebarSection>
-                <SidebarItem href="/account" current={pathname.startsWith('/account')}>
-                    <UserCircleIcon />
-                    <SidebarLabel>My Account</SidebarLabel>
-                </SidebarItem>
-                <SidebarItem onClick={themeSwitch}>
-                    {isDarkMode ? (
-                        <SunIcon className="sun h-6 w-6 text-yellow-500" />
-                    ) : (
-                        <MoonIcon className="moon h-6 w-6 text-gray-900 dark:text-gray-100" />
-                    )}
-                    <SidebarLabel>Dark/Light Mode</SidebarLabel>
-                </SidebarItem>
-                <SidebarItem href="#">
-                    <ArrowRightStartOnRectangleIcon />
-                    <SidebarLabel>Sign out</SidebarLabel>
-                </SidebarItem>
+                    <SidebarItem href="/account" current={pathname.startsWith('/account')}>
+                        <UserCircleIcon />
+                        <SidebarLabel>My Account</SidebarLabel>
+                    </SidebarItem>
+                    <ThemeSwitcher />
+                    <SidebarItem href="#">
+                        <ArrowRightStartOnRectangleIcon />
+                        <SidebarLabel>Sign out</SidebarLabel>
+                    </SidebarItem>
                 </SidebarSection>
             </SidebarBody>
 
