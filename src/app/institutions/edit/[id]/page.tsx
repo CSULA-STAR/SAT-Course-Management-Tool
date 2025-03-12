@@ -2,20 +2,15 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { Fieldset, Label } from "@/components/fieldset";
 import { Input } from "@/components/input";
-import * as Headless from "@headlessui/react";
-import {
-    Dialog,
-    DialogActions,
-    DialogDescription,
-    DialogTitle,
-} from "@/components/dialog";
 import { Button } from "@/components/button";
+import * as Headless from "@headlessui/react";
+import { Fieldset, Label } from "@/components/fieldset";
+import { Dialog, DialogActions, DialogDescription, DialogTitle } from "@/components/dialog";
 
 const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/schools`;
 
-export default function EditSchoolPage({
+export default function Page({
     params,
 }: {
     params: Promise<{ id: string }>
