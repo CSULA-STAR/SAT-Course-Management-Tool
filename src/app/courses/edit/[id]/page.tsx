@@ -26,58 +26,58 @@ const schoolsApiUrl = `${process.env.NEXT_PUBLIC_API_URL}/schools`;
 const programsApiUrl = `${process.env.NEXT_PUBLIC_API_URL}/programs`;
 
 export default function Page({
-params,
+    params,
 }: {
-params: Promise<{ id: string }>
+    params: Promise<{ id: string }>
 }) {
-const courseId = use(params).id;
-const router = useRouter();
+    const courseId = use(params).id;
+    const router = useRouter();
 
-const [courseName, setCourseName] = useState("");
-const [courseCode, setCourseCode] = useState<string[]>([]);
-const [equivalentTo, setEquivalentTo] = useState("");
-const [credits, setCredits] = useState("");
-const [category, setCategory] = useState("");
-const [departments, setDepartments] = useState<string[]>([]);
-const [selectedSchool, setSelectedSchool] = useState("");
-const [schools, setSchools] = useState<School[]>([]);
-const [programs, setPrograms] = useState<Program[]>([]);
-const [error, setError] = useState<string | null>(null);
-const [showErrorDialog, setShowErrorDialog] = useState(false);
-const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [courseName, setCourseName] = useState("");
+    const [courseCode, setCourseCode] = useState<string[]>([]);
+    const [equivalentTo, setEquivalentTo] = useState("");
+    const [credits, setCredits] = useState("");
+    const [category, setCategory] = useState("");
+    const [departments, setDepartments] = useState<string[]>([]);
+    const [selectedSchool, setSelectedSchool] = useState("");
+    const [schools, setSchools] = useState<School[]>([]);
+    const [programs, setPrograms] = useState<Program[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
-// Fetch the existing course details and prepopulate the fields.
-useEffect(() => {
-    if (!courseId) return;
-    fetch(`${coursesApiUrl}/${courseId}`)
-    .then((res) => {
-        if (!res.ok) {
-        router.push("/courses");
-        return Promise.reject("Course not found or server error.");
-        }
-        return res.json();
-    })
-    .then((data) => {
-        // Handle the API response which might be an array or an object.
-        const course = Array.isArray(data) ? data[0] : data;
-        setCourseName(course.course_name);
-        setCourseCode(course.course_code);
-        // Convert an array of equivalent course codes to a comma‐separated string.
-        setEquivalentTo(Array.isArray(course.equivalent_to)
-        ? course.equivalent_to.join(", ")
-        : course.equivalent_to || ""
-        );
-        setCredits(course.credits ? String(course.credits) : "");
-        setCategory(course.category);
-        setDepartments(course.department);
-        setSelectedSchool(course.s_id);
-    })
-    .catch((err) => {
-        console.error("Error fetching course details:", err);
-        setError("Error fetching course details.");
-        setShowErrorDialog(true);
-    });
-}, [courseId, router]);
+    // Fetch the existing course details and prepopulate the fields.
+    useEffect(() => {
+        if (!courseId) return;
+        fetch(`${coursesApiUrl}/${courseId}`)
+        .then((res) => {
+            if (!res.ok) {
+            router.push("/courses");
+            return Promise.reject("Course not found or server error.");
+            }
+            return res.json();
+        })
+        .then((data) => {
+            // Handle the API response which might be an array or an object.
+            const course = Array.isArray(data) ? data[0] : data;
+            setCourseName(course.course_name);
+            setCourseCode(course.course_code);
+            // Convert an array of equivalent course codes to a comma‐separated string.
+            setEquivalentTo(Array.isArray(course.equivalent_to)
+            ? course.equivalent_to.join(", ")
+            : course.equivalent_to || ""
+            );
+            setCredits(course.credits ? String(course.credits) : "");
+            setCategory(course.category);
+            setDepartments(course.department);
+            setSelectedSchool(course.s_id);
+        })
+        .catch((err) => {
+            console.error("Error fetching course details:", err);
+            setError("Error fetching course details.");
+            setShowErrorDialog(true);
+        });
+    }, [courseId, router]);
 
 // Fetch the list of schools for the Institution dropdown.
 useEffect(() => {
