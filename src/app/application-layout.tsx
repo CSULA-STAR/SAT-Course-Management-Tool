@@ -83,15 +83,15 @@ export function ApplicationLayout({
                 <SidebarSpacer />
 
                 <SidebarSection>
-                    <SidebarItem href="/account" current={pathname.startsWith('/account')}>
+                    {/* <SidebarItem href="/account" current={pathname.startsWith('/account')}>
                         <UserCircleIcon />
                         <SidebarLabel>My Account</SidebarLabel>
-                    </SidebarItem>
+                    </SidebarItem> */}
                     <ThemeSwitcher />
-                    <SidebarItem href="#">
+                    {/* <SidebarItem href="#">
                         <ArrowRightStartOnRectangleIcon />
                         <SidebarLabel>Sign out</SidebarLabel>
-                    </SidebarItem>
+                    </SidebarItem> */}
                 </SidebarSection>
             </SidebarBody>
 
