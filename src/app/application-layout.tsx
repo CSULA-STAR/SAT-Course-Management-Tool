@@ -4,7 +4,7 @@ import { Dropdown, DropdownButton, DropdownDivider, DropdownItem, DropdownLabel,
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from '@/components/navbar'
 import { Sidebar, SidebarBody, SidebarHeader, SidebarItem, SidebarLabel, SidebarSection, SidebarSpacer } from '@/components/sidebar'
 import { SidebarLayout } from '@/components/sidebar-layout'
-import { AcademicCapIcon, BookOpenIcon, Square2StackIcon, ArrowRightStartOnRectangleIcon, UserCircleIcon, StarIcon } from '@heroicons/react/16/solid'
+import { AcademicCapIcon, BookOpenIcon, Square2StackIcon, ArrowRightStartOnRectangleIcon, UserCircleIcon, StarIcon, ArchiveBoxArrowDownIcon } from '@heroicons/react/16/solid'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import ThemeSwitcher from "@/components/theme-switcher";
@@ -77,6 +77,10 @@ export function ApplicationLayout({
                     <SidebarItem href="/institutions" current={pathname.startsWith('/institutions')}>
                         <AcademicCapIcon />
                         <SidebarLabel>Institutions</SidebarLabel>
+                    </SidebarItem>
+                    <SidebarItem href="/autoimport" current={pathname.startsWith('/autoimport')}>
+                        <ArchiveBoxArrowDownIcon/>
+                        <SidebarLabel>Courses Auto Import</SidebarLabel>
                     </SidebarItem>
                 </SidebarSection>
                 
