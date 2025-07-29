@@ -2,10 +2,29 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '@/components/table';
-import { Button } from '@/components/button';
-import { Checkbox } from '@/components/checkbox';
-import { Strong } from '@/components/text';
+import axios from 'axios';
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Typography,
+  CircularProgress,
+  IconButton,
+  Checkbox,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+} from '@mui/material';
+import PrintIcon from '@mui/icons-material/Print';
+import styles from './Map.module.css';
 
 interface Course {
   course_code: string | string[];
@@ -28,72 +47,6 @@ interface Row {
   id: string;
 }
 
-// Example API response data
-const reply_json = [
-  {
-    "course_code": "ACCT 2100",
-    "course_name": "Principles of Financial Accounting",
-    "credits": 3,
-    "equivalent_to": [
-      "ACCT 001A"
-    ],
-    "equivalent_to_course_name": [
-      "Financial Accounting"
-    ],
-    "equivalent_to_credits": [
-      4
-    ]
-  },
-  {
-    "course_code": "CIS 1200",
-    "course_name": "Information and Technology Literacy",
-    "credits": 3,
-    "equivalent_to": [
-      "BIT 025",
-      "CIS 010"
-    ],
-    "equivalent_to_course_name": [
-      "Survey of Computer Technology in Business",
-      "Introduction to Information Systems"
-    ],
-    "equivalent_to_credits": [
-      3,
-      3
-    ]
-  },
-  {
-    "course_code": "CIS 2830",
-    "course_name": "Introduction to Application Programming",
-    "credits": 3,
-    "equivalent_to": [
-      "CIS 016"
-    ],
-    "equivalent_to_course_name": [
-      "Java Programming"
-    ],
-    "equivalent_to_credits": [
-      3
-    ]
-  },
-  {
-    "course_code": "ECON 2010",
-    "course_name": "Principles of Economics I Microeconomics",
-    "credits": 3,
-    "equivalent_to": [
-      "ECON 001B",
-      "ECON 001BH"
-    ],
-    "equivalent_to_course_name": [
-      "Principles of Microeconomics",
-      "Honors Principles of Microeconomics"
-    ],
-    "equivalent_to_credits": [
-      3,
-      3
-    ]
-  }
-];
-
 const Map = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,10 +57,12 @@ const Map = () => {
   const [departmentName, setDepartmentName] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState('');
 
   const s_id = searchParams.get('s_id');
   const dept = searchParams.get('dept');
-  
+
   useEffect(() => {
     const navbar = document.querySelector('.header') as HTMLElement | null;
     if (navbar) navbar.style.display = 'none';
@@ -127,39 +82,53 @@ const Map = () => {
 
   useEffect(() => {
     if (!s_id || !dept) {
-      router.push('/autoimport'); // fallback in case of missing params
+      router.push('/autoimport');
       return;
     }
 
     const fetchMappingData = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call when ready
-        // const response = await fetch(`http://localhost:3001/api/autoimport?s_id=${s_id}&dept=${dept}`);
-        // const data = await response.json();
-        
-        // Using example data(reply_json) for now
-        const data = {
-          mappings: reply_json.map(item => ({
-            external_course: {
-              course_code: item.course_code,
-              course_name: item.course_name,
-              course_credits: item.credits
-            },
-            csula_course: item.equivalent_to.map((code, index) => ({
-              course_code: code,
-              course_name: item.equivalent_to_course_name[index],
-              course_credits: item.equivalent_to_credits[index]
-            }))
-          })),
-          department_name: 'Computer Information Systems',
-          school_name: 'Transfer School'
+        const response = {
+          data: {
+            school_name: 'Fake Transfer School',
+            department_name: 'Computer Science',
+            mappings: [
+              {
+                external_course: {
+                  course_code: 'MATH 101',
+                  course_name: 'College Algebra',
+                  course_credits: 3,
+                },
+                csula_course: [
+                  {
+                    course_code: 'MATH 1000A',
+                    course_name: 'Intro Algebra',
+                    course_credits: 3,
+                  },
+                ],
+              },
+              {
+                external_course: {
+                  course_code: 'ENG 102',
+                  course_name: 'Composition',
+                  course_credits: 3,
+                },
+                csula_course: [
+                  {
+                    course_code: 'ENGL 1010',
+                    course_name: 'College Writing',
+                    course_credits: 3,
+                  },
+                ],
+              },
+            ],
+          },
         };
 
-        const mappings: Mapping[] = data.mappings || [];
-
-        setDepartmentName(data.department_name || 'Courses Mapping');
-        setSchoolName(data.school_name || 'Transfer School');
+        const mappings: Mapping[] = response.data.mappings || [];
+        setDepartmentName(response.data.department_name || 'Courses Mapping');
+        setSchoolName(response.data.school_name || 'Transfer School');
 
         const flatRows: Row[] = [];
 
@@ -186,7 +155,6 @@ const Map = () => {
         setRows(flatRows.sort((a, b) => a.csula_course_code.localeCompare(b.csula_course_code)));
         setError(flatRows.length ? null : 'No mapping course available');
       } catch (err) {
-        console.error(err);
         setError('Failed to fetch mapping data');
       } finally {
         setLoading(false);
@@ -199,172 +167,126 @@ const Map = () => {
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const copy = new Set(prev);
-      if (copy.has(id)) {
-        copy.delete(id);
-      } else {
-        copy.add(id);
-      }
+      copy.has(id) ? copy.delete(id) : copy.add(id);
       return copy;
     });
   };
 
-  const selectAll = () => {
-    const allIds = new Set(rows.map(row => row.id));
-    setSelectedIds(allIds);
+  const handlePrint = () => window.print();
+
+  const handleImport = () => {
+    if (selectedIds.size === 0) {
+      setDialogMessage('Please select at least one course to import.');
+      setShowDialog(true);
+      return;
+    }
+
+    // Show success dialog
+    setDialogMessage('Selected courses imported successfully!');
+    setShowDialog(true);
   };
 
-  const unselectAll = () => {
-    setSelectedIds(new Set());
-  };
-
-  const handleImportSelected = async () => {
-    // Format selected courses into JSON payload
-    const selectedRows = rows.filter(row => selectedIds.has(row.id));
-    const payload = JSON.stringify({
-      school_id: s_id,
-      dept: dept,
-      mapping: selectedRows.map(row => ({
-        external_course: {
-          course_code: row.ext_course_code,
-          course_name: row.ext_course_name,
-          credits: row.ext_credits
-        },
-        csula_course: {
-          course_code: row.csula_course_code,
-          course_name: row.csula_course_name,
-          credits: row.csula_credits
-        }
-      }))
-    })
-
-    // TODO: Implement import functionality
-    // Send POST request using fetch to /api/autoimport/courses endpoint
-    // Handle success/error responses
-    // Show confirmation to user
-
-    // Using console.log for now
-    console.log(payload);
-
-  };
-
-  const handleRowClick = (id: string) => {
-    toggleSelect(id);
+  const handleDialogClose = () => {
+    setShowDialog(false);
+    setDialogMessage('');
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[80vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-white"></div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-[80vh]">
-        <Strong className="text-red-600 dark:text-red-400">{error}</Strong>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <Typography color="error">{error}</Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="mt-0 p-6 relative">
-      {/* Action buttons */}
-      <div className="flex gap-4 mb-6">
-        <Button onClick={selectAll} color="zinc">
-          Select All
-        </Button>
-        <Button onClick={unselectAll} outline>
-          Unselect All
-        </Button>
-        <div className="ml-auto">
-          <Button 
-            onClick={handleImportSelected} 
-            color="blue"
-            disabled={selectedIds.size === 0}
-          >
-            Import Selected Courses ({selectedIds.size})
-          </Button>
-        </div>
-      </div>
+    <Box className={styles['map-content']} sx={{ p: 3, position: 'relative' }}>
+      <IconButton aria-label="print" onClick={handlePrint} sx={{ position: 'absolute', top: 16, right: 16 }}>
+        <PrintIcon fontSize="large" />
+      </IconButton>
 
-      <Table className="mt-6">
-        {/* Department Header Row */}
-        <TableHead>
-          <TableRow className="bg-gray-50 border-b-2 border-gray-200">
-            <TableHeader className="text-center py-3 px-4 text-xl font-bold text-gray-700" colSpan={4}>
-              {departmentName}
-            </TableHeader>
-          </TableRow>
-        </TableHead>
-        
-        {/* Column Headers Row */}
-        <TableHead>
-          <TableRow className="bg-white">
-            <TableHeader className="text-black w-[60px] text-center p-2">
-              <div className="flex justify-center items-center scale-130 m-2">
-                <Checkbox 
-                  checked={selectedIds.size === rows.length && rows.length > 0}
-                  onChange={() => selectedIds.size === rows.length ? unselectAll() : selectAll()}
-                />
-              </div>
-            </TableHeader>
-            <TableHeader className="text-center text-black text-lg">
-              {`From: ${schoolName}`}
-            </TableHeader>
-            <TableHeader className="text-center w-[10%] text-5xl text-purple-900">
-              <span>&#8594;</span>
-            </TableHeader>
-            <TableHeader className="text-center text-black text-lg">
-              To: CalState LA
-            </TableHeader>
-          </TableRow>
-        </TableHead>
+      <Typography variant="h4" gutterBottom>{departmentName}</Typography>
 
-        {/* Course Mapping Table Body */}
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow 
-              key={row.id} 
-              className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:border-2 hover:border-gray-500"
-              onClick={() => handleRowClick(row.id)}
-            >
-              <TableCell className="w-[60px] text-center p-2">
-                <div onClick={(e) => e.stopPropagation()} className="flex justify-center items-center scale-130 m-2">
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow className={styles['MuiTableRow-head']}>
+              <TableCell padding="checkbox">
+                <Checkbox disabled />
+              </TableCell>
+              <TableCell align="center" className={styles['MuiTableCell-head']}>
+                {`From: ${schoolName}`}
+              </TableCell>
+              <TableCell align="center" className={styles['arrow-cell']}><span style={{ color: '#FFF' }}>&#8594;</span></TableCell>
+              <TableCell align="center" className={styles['MuiTableCell-head']}>To: CalState LA</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.id} className={styles['MuiTableRow-root']}>
+                <TableCell padding="checkbox">
                   <Checkbox
                     checked={selectedIds.has(row.id)}
                     onChange={() => toggleSelect(row.id)}
+                    inputProps={{ 'aria-label': 'select mapping' }}
                   />
-                </div>
-              </TableCell>
-              <TableCell className="bg-blue-50 w-[35%]">
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <div className="font-bold text-purple-700 text-lg mb-1">{row.ext_course_code}</div>
-                    <div className="text-gray-700 text-base mb-1">{row.ext_course_name}</div>
+                </TableCell>
+                <TableCell align="left" className={styles['transferschool-cell']}>
+                  <div className={styles['course-block']}>
+                    <div className={styles['course-info']}>
+                      <div className={styles['course-code']}>{row.ext_course_code}</div>
+                      <div className={styles['course-name']}>{row.ext_course_name}</div>
+                    </div>
+                    <span className={styles['credits-pill']}>{row.ext_credits.toFixed(2)}</span>
                   </div>
-                  <span className="bg-gray-200 text-gray-800 font-bold rounded-lg px-3 py-1 text-base min-w-12 text-center inline-block">
-                    {row.ext_credits.toFixed(2)}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell className="text-center w-[10%] text-5xl text-purple-900">&#8594;</TableCell>
-              <TableCell className="bg-yellow-50 w-[35%]">
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <div className="font-bold text-purple-700 text-lg mb-1">{row.csula_course_code}</div>
-                    <div className="text-gray-700 text-base mb-1">{row.csula_course_name}</div>
+                </TableCell>
+                <TableCell align="center" className={styles['arrow-cell']}>&#8594;</TableCell>
+                <TableCell align="left" className={styles['calstatela-cell']}>
+                  <div className={styles['course-block']}>
+                    <div className={styles['course-info']}>
+                      <div className={styles['course-code']}>{row.csula_course_code}</div>
+                      <div className={styles['course-name']}>{row.csula_course_name}</div>
+                    </div>
+                    <span className={styles['credits-pill']}>{row.csula_credits.toFixed(2)}</span>
                   </div>
-                  <span className="bg-gray-200 text-gray-800 font-bold rounded-lg px-3 py-1 text-base min-w-12 text-center inline-block">
-                    {row.csula_credits.toFixed(2)}
-                  </span>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Box mt={3} textAlign="right">
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleImport}
+          disabled={selectedIds.size === 0}
+        >
+          Import Selected
+        </Button>
+      </Box>
+
+      <Dialog open={showDialog} onClose={handleDialogClose}>
+        <DialogTitle></DialogTitle>
+        <DialogContent>
+          <DialogContentText>{dialogMessage}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} autoFocus>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 
