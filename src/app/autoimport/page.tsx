@@ -1,45 +1,24 @@
 'use client'
 
+import axios from "axios";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/button";
-import { Select } from "@/components/select";
-import { Text } from "@/components/text";
-import { Fieldset, Field, Label } from "@/components/fieldset";
-
-// Define proper TypeScript interfaces
-interface College {
-  id: string;
-  name: string;
-}
-
-interface Program {
-  id: string;
-  name: string;
-  department: string;
-}
-
-interface SelectOption {
-  label: string;
-  value: College | Program;
-}
+import { Box, Stack, Button, Typography, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent } from "@mui/material";
 
 const Autoimport = () => {
-  const [college, setCollege] = useState<College | null>(null);
-  const [schools, setSchools] = useState<SelectOption[]>([]);
-  const [programs, setPrograms] = useState<SelectOption[]>([]);
-  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [college, setCollege] = useState<any>(null);
+  const [schools, setSchools] = useState<Array<{ label: string; value: any }>>([]);
+  const [programs, setPrograms] = useState<Array<{ label: string; value: any }>>([]);
+  const [selectedProgram, setSelectedProgram] = useState<any>(null);
 
-  const handleCollegeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleCollegeChange = (event: SelectChangeEvent) => {
     const selectedValue = event.target.value;
-    const selectedCollege = schools.find(school => school.value.id === selectedValue)?.value as College;
-    setCollege(selectedCollege || null);
+    setCollege(selectedValue);
     setSelectedProgram(null);
   };
 
-  const handleProgramChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleProgramChange = (event: SelectChangeEvent) => {
     const selectedValue = event.target.value;
-    const selectedProgramOption = programs.find(program => program.value.id === selectedValue)?.value as Program;
-    setSelectedProgram(selectedProgramOption || null);
+    setSelectedProgram(selectedValue);
   };
 
   const handleSubmit = () => {
@@ -54,10 +33,9 @@ const Autoimport = () => {
   useEffect(() => {
     const fetchColleges = async () => {
       try {
-        const response = await fetch("http://localhost:3001/fetch-institutes");
-        const data = await response.json();
+        const response = await axios.get("http://localhost:3001/fetch-institutes");
         setSchools(
-          data.map((college: College) => ({
+          response.data.map((college: any) => ({
             label: college.name,
             value: college,
           }))
@@ -74,10 +52,9 @@ const Autoimport = () => {
     const fetchPrograms = async () => {
       if (college) {
         try {
-          const response = await fetch(`http://localhost:3001/fetch-programs?collegeId=${college.id}`);
-          const data = await response.json();
+          const response = await axios.get(`http://localhost:3001/fetch-programs?collegeId=${college.id}`);
           setPrograms(
-            data.map((program: Program) => ({
+            response.data.map((program: any) => ({
               label: program.name,
               value: program,
             }))
@@ -94,67 +71,85 @@ const Autoimport = () => {
   }, [college]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-900 flex justify-center p-4">
-      <div className="max-w-md w-full space-y-4">
-        <div className="text-center">
-          <div className="mb-1">
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-4">
-              Courses Auto Import
-            </h1>
-            <Text className="text-lg font-medium text-zinc-900 dark:text-white mb-8 px-4">
-              This tool uses a scraper to automatically import course information from assist.org.
-              If the institution or program is not listed in the options below, please add them first.
-            </Text>
-          </div>
-        </div>
+    <Box
+      sx={{
+        height: "80vh",
+        width: "100vw",
+        textAlign: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Box>
+        <Stack direction="column" alignItems="center" spacing={2}>
+          <Box>
+            <img src="calstatelaLogo.png" alt="Cal State LA Logo" style={{ width: 150, height: 150 }} />
+          </Box>
+          <Typography
+            variant="h5"
+            component="div"
+            px={5}
+            pb={3}
+            fontSize={{ sm: 20 }}
+            textAlign="center"
+          >
+            Please select the school you transfer from and the Cal State LA program
+            you want to transfer to
+          </Typography>
 
-        <Fieldset>
-          <Field className="mb-4">
-            <Label htmlFor="college-select">From institution</Label>
+          <FormControl sx={{ minWidth: 250 }}>
+            <InputLabel id="college-label">From School</InputLabel>
             <Select
+              labelId="college-label"
               id="college-select"
-              value={college?.id || ''}
+              value={college || ''}
+              label="From School"
               onChange={handleCollegeChange}
+              renderValue={(selected) => (selected ? (selected as any).name : '')}
             >
-              <option value="">Select a school</option>
               {schools.map((school) => (
-                <option key={school.value.id} value={school.value.id}>
+                <MenuItem key={school.value.id} value={school.value}>
                   {school.label}
-                </option>
+                </MenuItem>
               ))}
             </Select>
-          </Field>
+          </FormControl>
 
-          <Field>
-            <Label htmlFor="program-select">To Cal State LA program</Label>
+          <FormControl sx={{ minWidth: 250 }}>
+            <InputLabel id="program-label">To Cal State LA program</InputLabel>
             <Select
+              labelId="program-label"
               id="program-select"
-              value={selectedProgram?.id || ''}
+              value={selectedProgram || ''}
+              label="To Cal State LA program"
               onChange={handleProgramChange}
+              renderValue={(selected) => (selected ? (selected as any).name : '')}
               disabled={!college}
             >
-              <option value="">Select a program</option>
               {programs.map((program) => (
-                <option key={program.value.id} value={program.value.id}>
+                <MenuItem key={program.value.id} value={program.value}>
                   {program.label}
-                </option>
+                </MenuItem>
               ))}
             </Select>
-          </Field>
+          </FormControl>
 
-          <div className="pt-4">
-            <Button
-              onClick={handleSubmit}
-              color="blue"
-              className="w-full"
-              disabled={!college || !selectedProgram}
-            >
-              Autoimport
-            </Button>
-          </div>
-        </Fieldset>
-      </div>
-    </div>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            sx={{
+              backgroundColor: "#FFCE00",
+              "&:hover": {
+                backgroundColor: "#e6bd00",
+              },
+            }}
+          >
+            Autoimport
+          </Button>
+        </Stack>
+      </Box>
+    </Box>
   );
 };
 
