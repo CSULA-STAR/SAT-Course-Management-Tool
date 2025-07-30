@@ -1,40 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import axios from 'axios';
-import {
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Typography,
-  CircularProgress,
-  IconButton,
-  Checkbox,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-} from '@mui/material';
-import PrintIcon from '@mui/icons-material/Print';
-import styles from './Map.module.css';
+import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '@/components/table';
+import { Button } from '@/components/button';
+import { Checkbox } from '@/components/checkbox';
+import { Strong } from '@/components/text';
+import { Dialog, DialogActions, DialogDescription, DialogTitle } from "@/components/dialog";
 
-interface Course {
-  course_code: string | string[];
-  course_name: string;
-  course_credits: number;
+const autoimportApiUrl = `${process.env.NEXT_PUBLIC_API_URL}/autoimport`;
+const coursesImportApiUrl = `${process.env.NEXT_PUBLIC_API_URL}/autoimport/courses`;
+
+interface MappingItem {
+  csula_course_code: string;
+  csula_course_name: string;
+  csula_credits: number;
+  equivalent_to: string[];
+  equivalent_to_course_name: string[];
+  equivalent_to_credits: number[];
 }
 
-interface Mapping {
-  csula_course: Course[];
-  external_course: Course;
+interface ApiResponse {
+  school_id: string;
+  school_name: string;
+  department_id: string;
+  department_name: string;
+  mappings: MappingItem[];
 }
 
 interface Row {
@@ -47,7 +38,7 @@ interface Row {
   id: string;
 }
 
-const Map = () => {
+export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -57,12 +48,15 @@ const Map = () => {
   const [departmentName, setDepartmentName] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showDialog, setShowDialog] = useState(false);
-  const [dialogMessage, setDialogMessage] = useState('');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccessMessage, setImportSuccessMessage] = useState<string>('');
+  const hasFetchedRef = useRef(false);
 
   const s_id = searchParams.get('s_id');
   const dept = searchParams.get('dept');
-
+  
   useEffect(() => {
     const navbar = document.querySelector('.header') as HTMLElement | null;
     if (navbar) navbar.style.display = 'none';
@@ -82,72 +76,51 @@ const Map = () => {
 
   useEffect(() => {
     if (!s_id || !dept) {
-      router.push('/autoimport');
+      router.push('/autoimport'); // fallback in case of missing params
       return;
     }
+
+    // Prevent multiple API calls
+    if (hasFetchedRef.current) {
+      return;
+    }
+    hasFetchedRef.current = true;
 
     const fetchMappingData = async () => {
       setLoading(true);
       try {
-        const response = {
-          data: {
-            school_name: 'Fake Transfer School',
-            department_name: 'Computer Science',
-            mappings: [
-              {
-                external_course: {
-                  course_code: 'MATH 101',
-                  course_name: 'College Algebra',
-                  course_credits: 3,
-                },
-                csula_course: [
-                  {
-                    course_code: 'MATH 1000A',
-                    course_name: 'Intro Algebra',
-                    course_credits: 3,
-                  },
-                ],
-              },
-              {
-                external_course: {
-                  course_code: 'ENG 102',
-                  course_name: 'Composition',
-                  course_credits: 3,
-                },
-                csula_course: [
-                  {
-                    course_code: 'ENGL 1010',
-                    course_name: 'College Writing',
-                    course_credits: 3,
-                  },
-                ],
-              },
-            ],
-          },
-        };
+        const response = await fetch(`${autoimportApiUrl}?s_id=${s_id}&dept=${dept}`);
+        const data: ApiResponse = await response.json();
+        
+        const mappings: MappingItem[] = data.mappings || [];
 
-        const mappings: Mapping[] = response.data.mappings || [];
-        setDepartmentName(response.data.department_name || 'Courses Mapping');
-        setSchoolName(response.data.school_name || 'Transfer School');
+        setDepartmentName(data.department_name || 'Courses Mapping');
+        setSchoolName(data.school_name || 'Transfer School');
 
         const flatRows: Row[] = [];
 
-        mappings.forEach((mapping, idx) => {
-          const ext = mapping.external_course;
-          const extCodes = Array.isArray(ext.course_code) ? ext.course_code.join(', ') : ext.course_code;
+        mappings.forEach((item: MappingItem, idx: number) => {
+          const csulaCourseCode = item.csula_course_code;
+          const csulaCourseName = item.csula_course_name;
+          const csulaCredits = item.csula_credits;
 
-          if (extCodes === 'READY 0001') return;
+          // Skip if no equivalent courses
+          if (!item.equivalent_to || item.equivalent_to.length === 0) {
+            return;
+          }
 
-          mapping.csula_course.forEach((csula, i) => {
-            const csulaCodes = Array.isArray(csula.course_code) ? csula.course_code.join(', ') : csula.course_code;
+          item.equivalent_to.forEach((extCode: string, i: number) => {
+            const extCourseName = item.equivalent_to_course_name[i] || '';
+            const extCredits = item.equivalent_to_credits[i] || 0;
+            
             flatRows.push({
-              csula_course_code: csulaCodes,
-              csula_course_name: csula.course_name,
-              csula_credits: csula.course_credits,
-              ext_course_code: extCodes,
-              ext_course_name: ext.course_name,
-              ext_credits: ext.course_credits,
-              id: `${extCodes}-${csulaCodes}-${idx}-${i}`,
+              csula_course_code: csulaCourseCode,
+              csula_course_name: csulaCourseName,
+              csula_credits: csulaCredits,
+              ext_course_code: extCode,
+              ext_course_name: extCourseName,
+              ext_credits: extCredits,
+              id: `${csulaCourseCode}-${extCode}-${idx}-${i}`,
             });
           });
         });
@@ -155,6 +128,7 @@ const Map = () => {
         setRows(flatRows.sort((a, b) => a.csula_course_code.localeCompare(b.csula_course_code)));
         setError(flatRows.length ? null : 'No mapping course available');
       } catch (err) {
+        console.error(err);
         setError('Failed to fetch mapping data');
       } finally {
         setLoading(false);
@@ -162,132 +136,241 @@ const Map = () => {
     };
 
     fetchMappingData();
-  }, [s_id, dept, router]);
+  }, [s_id, dept]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const copy = new Set(prev);
-      copy.has(id) ? copy.delete(id) : copy.add(id);
+      if (copy.has(id)) {
+        copy.delete(id);
+      } else {
+        copy.add(id);
+      }
       return copy;
     });
   };
 
-  const handlePrint = () => window.print();
-
-  const handleImport = () => {
-    if (selectedIds.size === 0) {
-      setDialogMessage('Please select at least one course to import.');
-      setShowDialog(true);
-      return;
-    }
-
-    // Show success dialog
-    setDialogMessage('Selected courses imported successfully!');
-    setShowDialog(true);
+  const selectAll = () => {
+    const allIds = new Set(rows.map(row => row.id));
+    setSelectedIds(allIds);
   };
 
-  const handleDialogClose = () => {
-    setShowDialog(false);
-    setDialogMessage('');
+  const unselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleImportSelected = async () => {
+    // Format selected courses into JSON payload
+    const selectedRows = rows.filter(row => selectedIds.has(row.id));
+    const payload = JSON.stringify({
+      school_id: s_id,
+      dept: dept,
+      department_name: departmentName,
+      mapping: selectedRows.map(row => ({
+        external_course: {
+          course_code: row.ext_course_code,
+          course_name: row.ext_course_name,
+          credits: row.ext_credits
+        },
+        csula_course: {
+          course_code: row.csula_course_code,
+          course_name: row.csula_course_name,
+          credits: row.csula_credits
+        }
+      }))
+    });
+
+    try {
+      // TODO: Implement the API call and response handling
+      // 1. Make the API call, using POST method and payload
+      const response = await fetch(coursesImportApiUrl, {
+        // TODO ...
+      });
+
+      // 2. Parse response
+      const responseData = await response.json();
+
+      // 3. Handle success/error 
+      if (!response.ok) {
+        // Handle error case, get the error message from the response: responseData.error
+        const errorMessage = responseData.error || 'Failed to import courses';
+        // Set the error message using setImportError
+        setImportError(errorMessage);
+        // Show the error dialog by setting setShowErrorDialog to true
+        setShowErrorDialog(true);
+
+      } else {
+        // TODO: Handle success case, get the success message from the response: responseData.message
+        // ...
+
+        // TODO: Display success message by updating state variables:
+        // - Set the success message using setImportSuccessMessage
+        // - Show the success dialog by setting setShowSuccessDialog to true
+        // ...
+        
+        // Reset selection
+        setSelectedIds(new Set());
+      }
+
+    } catch (error) {
+      console.error('Error importing courses:', error);
+      setImportError('Network error occurred while importing courses');
+      setShowErrorDialog(true);
+    }
+  };
+
+  const handleRowClick = (id: string) => {
+    toggleSelect(id);
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center min-h-[80vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-white"></div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-        <Typography color="error">{error}</Typography>
-      </Box>
+      <div className="flex justify-center items-center min-h-[80vh]">
+        <Strong className="text-red-600 dark:text-red-400">{error}</Strong>
+      </div>
     );
   }
 
   return (
-    <Box className={styles['map-content']} sx={{ p: 3, position: 'relative' }}>
-      <IconButton aria-label="print" onClick={handlePrint} sx={{ position: 'absolute', top: 16, right: 16 }}>
-        <PrintIcon fontSize="large" />
-      </IconButton>
+    <>
+    <div className="mt-0 p-6 relative max-w-7xl mx-auto">
+      {/* Action buttons */}
+      <div className="flex gap-4 mb-6">
+        <Button onClick={selectAll} color="zinc">
+          Select All
+        </Button>
+        <Button onClick={unselectAll} outline>
+          Unselect All
+        </Button>
+        <div className="ml-auto">
+          <Button 
+            onClick={handleImportSelected} 
+            color="blue"
+            disabled={selectedIds.size === 0}
+          >
+            Import Selected Courses ({selectedIds.size})
+          </Button>
+        </div>
+      </div>
 
-      <Typography variant="h4" gutterBottom>{departmentName}</Typography>
+      {/* Horizontal scroll instruction */}
+      <div className="text-sm text-gray-600 dark:text-gray-400 text-center mb-2">
+        💡 Tip: The mapping table is horizontally scrollable if you can&apos;t see all columns
+      </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow className={styles['MuiTableRow-head']}>
-              <TableCell padding="checkbox">
-                <Checkbox disabled />
-              </TableCell>
-              <TableCell align="center" className={styles['MuiTableCell-head']}>
-                {`From: ${schoolName}`}
-              </TableCell>
-              <TableCell align="center" className={styles['arrow-cell']}><span style={{ color: '#FFF' }}>&#8594;</span></TableCell>
-              <TableCell align="center" className={styles['MuiTableCell-head']}>To: CalState LA</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id} className={styles['MuiTableRow-root']}>
-                <TableCell padding="checkbox">
+      <Table className="mt-6 w-full border border-gray-300">
+        {/* Department Header Row */}
+        <TableHead>
+          <TableRow className="bg-gray-50">
+            <TableHeader className="text-center py-3 px-4 text-xl font-bold text-gray-700" colSpan={4}>
+              {departmentName}
+            </TableHeader>
+          </TableRow>
+        </TableHead>
+        
+        {/* Column Headers Row */}
+        <TableHead>
+          <TableRow className="bg-white">
+            <TableHeader className="text-black w-[60px] text-center p-2">
+              <div className="flex justify-center items-center scale-130 m-2">
+                <Checkbox 
+                  checked={selectedIds.size === rows.length && rows.length > 0}
+                  onChange={() => selectedIds.size === rows.length ? unselectAll() : selectAll()}
+                />
+              </div>
+            </TableHeader>
+            <TableHeader className="text-center text-black text-lg">
+              {`From: ${schoolName}`}
+            </TableHeader>
+            <TableHeader className="text-center w-[8%] text-5xl text-purple-900">
+              <span>&#8594;</span>
+            </TableHeader>
+            <TableHeader className="text-center text-black text-lg">
+              To: CalState LA
+            </TableHeader>
+          </TableRow>
+        </TableHead>
+
+        {/* Course Mapping Table Body */}
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow 
+              key={row.id} 
+              className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:border-2 hover:border-gray-500"
+              onClick={() => handleRowClick(row.id)}
+            >
+              <TableCell className="w-[60px] text-center p-2">
+                <div onClick={(e) => e.stopPropagation()} className="flex justify-center items-center scale-130 m-2">
                   <Checkbox
                     checked={selectedIds.has(row.id)}
                     onChange={() => toggleSelect(row.id)}
-                    inputProps={{ 'aria-label': 'select mapping' }}
                   />
-                </TableCell>
-                <TableCell align="left" className={styles['transferschool-cell']}>
-                  <div className={styles['course-block']}>
-                    <div className={styles['course-info']}>
-                      <div className={styles['course-code']}>{row.ext_course_code}</div>
-                      <div className={styles['course-name']}>{row.ext_course_name}</div>
-                    </div>
-                    <span className={styles['credits-pill']}>{row.ext_credits.toFixed(2)}</span>
+                </div>
+              </TableCell>
+              <TableCell className="bg-blue-50 w-[42%]">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-purple-700 text-lg mb-1 break-words">{row.ext_course_code}</div>
+                    <div className="text-gray-700 text-base mb-1 break-words leading-relaxed">{row.ext_course_name}</div>
                   </div>
-                </TableCell>
-                <TableCell align="center" className={styles['arrow-cell']}>&#8594;</TableCell>
-                <TableCell align="left" className={styles['calstatela-cell']}>
-                  <div className={styles['course-block']}>
-                    <div className={styles['course-info']}>
-                      <div className={styles['course-code']}>{row.csula_course_code}</div>
-                      <div className={styles['course-name']}>{row.csula_course_name}</div>
-                    </div>
-                    <span className={styles['credits-pill']}>{row.csula_credits.toFixed(2)}</span>
+                  <span className="bg-gray-200 text-gray-800 font-bold rounded-lg px-3 py-1 text-base min-w-12 text-center inline-block flex-shrink-0">
+                    {row.ext_credits.toFixed(2)}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell className="text-center w-[8%] text-5xl text-purple-900">&#8594;</TableCell>
+              <TableCell className="bg-yellow-50 w-[42%]">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-purple-700 text-lg mb-1 break-words">{row.csula_course_code}</div>
+                    <div className="text-gray-700 text-base mb-1 break-words leading-relaxed">{row.csula_course_name}</div>
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Box mt={3} textAlign="right">
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleImport}
-          disabled={selectedIds.size === 0}
-        >
-          Import Selected
-        </Button>
-      </Box>
-
-      <Dialog open={showDialog} onClose={handleDialogClose}>
-        <DialogTitle></DialogTitle>
-        <DialogContent>
-          <DialogContentText>{dialogMessage}</DialogContentText>
-        </DialogContent>
+                  <span className="bg-gray-200 text-gray-800 font-bold rounded-lg px-3 py-1 text-base min-w-12 text-center inline-block flex-shrink-0">
+                    {row.csula_credits.toFixed(2)}
+                  </span>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+    
+    {/* Error Dialog */}
+    <Dialog open={showErrorDialog} onClose={setShowErrorDialog}>
+        <DialogTitle>Import Error</DialogTitle>
+        <DialogDescription>{importError}</DialogDescription>
         <DialogActions>
-          <Button onClick={handleDialogClose} autoFocus>
-            OK
-          </Button>
+        <Button
+            onClick={() => {
+            setShowErrorDialog(false);
+            setImportError(null);
+            }}
+        >
+            Confirm
+        </Button>
         </DialogActions>
-      </Dialog>
-    </Box>
+    </Dialog>
+    
+    {/* Success Dialog */}
+    <Dialog open={showSuccessDialog} onClose={setShowSuccessDialog}>
+        <DialogTitle>Import Successful</DialogTitle>
+        <DialogDescription>{importSuccessMessage}</DialogDescription>
+        <DialogActions>
+        <Button onClick={() => {
+          setShowSuccessDialog(false);
+          router.push('/autoimport');
+        }}>Confirm</Button>
+        </DialogActions>
+    </Dialog>
+    </>
   );
-};
-
-export default Map;
+}
