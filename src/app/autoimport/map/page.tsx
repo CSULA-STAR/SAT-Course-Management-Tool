@@ -184,7 +184,11 @@ export default function Page() {
       // TODO: Implement the API call and response handling
       // 1. Make the API call, using POST method and payload
       const response = await fetch(coursesImportApiUrl, {
-        // TODO ...
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: payload,
       });
 
       // 2. Parse response
@@ -201,11 +205,13 @@ export default function Page() {
 
       } else {
         // TODO: Handle success case, get the success message from the response: responseData.message
-        // ...
+        const successMessage = responseData.message || 'Courses imported successfully';
 
         // TODO: Display success message by updating state variables:
         // - Set the success message using setImportSuccessMessage
+        setImportSuccessMessage(successMessage);
         // - Show the success dialog by setting setShowSuccessDialog to true
+        setShowSuccessDialog(true);
         // ...
         
         // Reset selection
