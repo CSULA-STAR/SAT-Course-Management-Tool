@@ -233,8 +233,15 @@ export default function Page() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-[80vh]">
-        <Strong className="text-red-600 dark:text-red-400">{error}</Strong>
+      <div className="flex flex-col justify-center items-center min-h-[80vh] gap-4">
+        <Strong className="text-red-600 dark:text-red-400 text-center">{error}</Strong>
+        <Button 
+          onClick={() => router.push('/autoimport')} 
+          color="blue"
+          className="mt-4"
+        >
+          Back to Previous Page
+        </Button>
       </div>
     );
   }
