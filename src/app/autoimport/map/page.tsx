@@ -90,8 +90,13 @@ export default function Page() {
       setLoading(true);
       try {
         const response = await fetch(`${autoimportApiUrl}?s_id=${s_id}&dept=${dept}`);
+
+        // Handle error case
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch mapping data');
+        }
         const data: ApiResponse = await response.json();
-        
         const mappings: MappingItem[] = data.mappings || [];
 
         setDepartmentName(data.department_name || 'Courses Mapping');
@@ -181,8 +186,6 @@ export default function Page() {
     });
 
     try {
-      // TODO: Implement the API call and response handling
-      // 1. Make the API call, using POST method and payload
       const response = await fetch(coursesImportApiUrl, {
         method: 'POST',
         headers: {
@@ -191,31 +194,20 @@ export default function Page() {
         body: payload,
       });
 
-      // 2. Parse response
       const responseData = await response.json();
 
-      // 3. Handle success/error 
       if (!response.ok) {
-        // Handle error case, get the error message from the response: responseData.error
         const errorMessage = responseData.error || 'Failed to import courses';
-        // Set the error message using setImportError
         setImportError(errorMessage);
-        // Show the error dialog by setting setShowErrorDialog to true
         setShowErrorDialog(true);
 
       } else {
-        // TODO: Handle success case, get the success message from the response: responseData.message
         const successMessage = responseData.message || 'Courses imported successfully';
-
-        // TODO: Display success message by updating state variables:
-        // - Set the success message using setImportSuccessMessage
         setImportSuccessMessage(successMessage);
-        // - Show the success dialog by setting setShowSuccessDialog to true
         setShowSuccessDialog(true);
-        // ...
         
         // Reset selection
-        setSelectedIds(new Set());
+        // setSelectedIds(new Set());
       }
 
     } catch (error) {
@@ -380,7 +372,6 @@ export default function Page() {
         <DialogActions>
         <Button onClick={() => {
           setShowSuccessDialog(false);
-          router.push('/autoimport');
         }}>Confirm</Button>
         </DialogActions>
     </Dialog>
