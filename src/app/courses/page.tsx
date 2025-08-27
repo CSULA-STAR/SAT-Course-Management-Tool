@@ -162,7 +162,7 @@ export default function Page() {
                 course.course_code.some(code => code.toLowerCase().includes(searchLower)) ||
                 course.equivalent_to.some(eq => eq.toLowerCase().includes(searchLower)) ||
                 course.credits.toString().includes(searchLower) ||
-                course.category.toLowerCase().includes(searchLower) ||
+                (course.category && course.category.toLowerCase().includes(searchLower)) ||
                 course.school.name.toLowerCase().includes(searchLower) ||
                 course.department.some(dep => dep.toLowerCase().includes(searchLower))
             );
